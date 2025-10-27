@@ -13,10 +13,30 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import io from 'socket.io-client';
-import { API_URL, SOCKET_URL, ENVIRONMENT_NAME } from './config';
 
-// API configuration is now managed in config.js
-// Switch between development and production by changing CURRENT_ENV in config.js
+// API Configuration - Change USE_PRODUCTION to switch environments
+// Set to true for production API, false for local development
+const USE_PRODUCTION = true;
+
+// API endpoint configurations
+const CONFIG = {
+  development: {
+    API_URL: 'http://localhost:3000/todos',
+    SOCKET_URL: 'http://localhost:3000',
+    name: 'Local Development',
+  },
+  production: {
+    API_URL: 'https://todolist.220fii1j0spm.us-south.codeengine.appdomain.cloud/todos',
+    SOCKET_URL: 'https://todolist.220fii1j0spm.us-south.codeengine.appdomain.cloud',
+    name: 'Production (IBM Code Engine)',
+  },
+};
+
+// Select current configuration based on USE_PRODUCTION flag
+const currentConfig = USE_PRODUCTION ? CONFIG.production : CONFIG.development;
+const API_URL = currentConfig.API_URL;
+const SOCKET_URL = currentConfig.SOCKET_URL;
+const ENVIRONMENT_NAME = currentConfig.name;
 
 const App = () => {
   // State management for our todo list and new todo input
@@ -35,12 +55,18 @@ const App = () => {
     fetchTodos();
 
     // Establish WebSocket connection for real-time updates
+    // For HTTPS endpoints, Socket.IO automatically uses WSS (secure WebSocket)
+    // Production environments may require long-polling as primary transport
     const socketInstance = io(SOCKET_URL, {
-      transports: ['websocket', 'polling'],
+      transports: USE_PRODUCTION ? ['polling'] : ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      timeout: 10000,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 10000,
+      timeout: 30000,
+      forceNew: true,
+      upgrade: true, // Allow transport upgrade when possible
+      rememberUpgrade: true,
     });
 
     setSocket(socketInstance);
@@ -48,14 +74,19 @@ const App = () => {
     // Listen for real-time todo updates from server
     // This fires whenever any client performs CRUD operations
     socketInstance.on('todos-updated', (updatedTodos) => {
-      console.log('📡 Real-time update received');
+      console.log('📡 Real-time update received:', updatedTodos);
+      console.log('📊 Number of todos received:', updatedTodos?.length || 0);
       setTodos(updatedTodos);
     });
 
     socketInstance.on('connect', () => {
       console.log('✅ Connected to real-time server');
+      console.log('🔗 Socket ID:', socketInstance.id);
+      console.log('🚀 Transport:', socketInstance.io.engine.transport.name);
       setIsConnected(true);
       setConnectionError(null);
+      // Refetch todos when reconnected to ensure sync
+      fetchTodos();
     });
 
     socketInstance.on('disconnect', () => {
@@ -65,8 +96,17 @@ const App = () => {
 
     socketInstance.on('connect_error', (error) => {
       console.log('⚠️ Connection error:', error.message);
+      console.log('⚠️ Using fallback: manual polling via HTTP');
       setIsConnected(false);
       setConnectionError(error.message);
+    });
+
+    socketInstance.on('reconnect_attempt', (attemptNumber) => {
+      console.log('🔄 Reconnection attempt:', attemptNumber);
+    });
+
+    socketInstance.io.engine.on('upgrade', (transport) => {
+      console.log('⬆️ Transport upgraded to:', transport.name);
     });
 
     // Cleanup: disconnect socket when component unmounts
@@ -83,9 +123,16 @@ const App = () => {
     try {
       setIsLoading(true);
       setConnectionError(null);
+      console.log('🔄 Fetching todos from:', API_URL);
+
       const response = await axios.get(API_URL, {
         timeout: 10000, // 10 second timeout
       });
+
+      console.log('✅ Fetch successful, status:', response.status);
+      console.log('📦 Response data:', response.data);
+      console.log('📊 Number of todos:', response.data?.length || 0);
+
       setTodos(response.data);
       setConnectionError(null);
     } catch (error) {
@@ -94,7 +141,8 @@ const App = () => {
                           error.message ||
                           'Failed to fetch todos';
       setConnectionError(errorMessage);
-      console.error('Fetch error:', errorMessage);
+      console.error('❌ Fetch error:', errorMessage);
+      console.error('📋 Full error:', error);
       Alert.alert('Connection Error', `Unable to connect to API: ${errorMessage}`);
     } finally {
       setIsLoading(false);
@@ -102,40 +150,67 @@ const App = () => {
   };
 
   // Create a new todo item via POST request
-  // No longer updates local state - real-time sync via Socket.IO
+  // After successful creation, state will be updated via Socket.IO or manual refetch
   const addTodo = async () => {
     if (!newTodo.trim()) return;
     try {
-      await axios.post(API_URL, { title: newTodo });
+      console.log('➕ Adding new todo:', newTodo);
+      const response = await axios.post(API_URL, { title: newTodo });
+      console.log('✅ Todo added:', response.data);
+
       // Clear input field after successful creation
       setNewTodo('');
-      // State update handled automatically by Socket.IO listener
+
+      // If Socket.IO doesn't update, manually refetch as fallback
+      setTimeout(() => {
+        console.log('🔄 Fallback: Refetching todos after add');
+        fetchTodos();
+      }, 300);
     } catch (error) {
+      console.error('❌ Failed to add todo:', error);
       Alert.alert('Error', 'Failed to add todo');
     }
   };
 
   // Remove a todo item using DELETE request
-  // No longer updates local state - real-time sync via Socket.IO
+  // After successful deletion, state will be updated via Socket.IO or manual refetch
   const deleteTodo = async (id) => {
     try {
+      console.log('🗑️ Deleting todo:', id);
       await axios.delete(`${API_URL}/${id}`);
-      // State update handled automatically by Socket.IO listener
+      console.log('✅ Todo deleted:', id);
+
+      // If Socket.IO doesn't update, manually refetch as fallback
+      setTimeout(() => {
+        console.log('🔄 Fallback: Refetching todos after delete');
+        fetchTodos();
+      }, 300);
     } catch (error) {
+      console.error('❌ Failed to delete todo:', error);
       Alert.alert('Error', 'Failed to delete todo');
     }
   };
 
   // Toggle todo completion status via PUT request
-  // No longer updates local state - real-time sync via Socket.IO
+  // After successful update, state will be updated via Socket.IO or manual refetch
   const updateTodo = async (id) => {
     const todo = todos.find((t) => t.id === id);
+    if (!todo) return;
+
     const updatedTodo = { ...todo, completed: !todo.completed };
 
     try {
+      console.log('✏️ Updating todo:', id, updatedTodo);
       await axios.put(`${API_URL}/${id}`, updatedTodo);
-      // State update handled automatically by Socket.IO listener
+      console.log('✅ Todo updated:', id);
+
+      // If Socket.IO doesn't update, manually refetch as fallback
+      setTimeout(() => {
+        console.log('🔄 Fallback: Refetching todos after update');
+        fetchTodos();
+      }, 300);
     } catch (error) {
+      console.error('❌ Failed to update todo:', error);
       Alert.alert('Error', 'Failed to update todo');
     }
   };
@@ -192,6 +267,11 @@ const App = () => {
         <Text style={styles.addButtonText}>Add To-Do</Text>
       </Pressable>
 
+      {/* Show todo count for debugging */}
+      <Text style={styles.debugText}>
+        Total Todos: {todos.length}
+      </Text>
+
       {/* FlatList renders our todo items efficiently */}
       {/* It only renders items visible on screen for better performance */}
       <FlatList
@@ -200,9 +280,9 @@ const App = () => {
         renderItem={({ item }) => (
           <View style={styles.todoContainer}>
             {/* Conditional styling: strike-through text for completed todos */}
-            <Text 
+            <Text
               style={[
-                styles.todoText, 
+                styles.todoText,
                 item.completed && styles.completed
               ]}
             >
@@ -300,6 +380,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#666',
     fontSize: 14,
+  },
+  // Debug text to show todo count
+  debugText: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 10,
+    fontStyle: 'italic',
   },
   // Input field with border for clear visual boundaries
   input: {
