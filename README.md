@@ -5,7 +5,7 @@
 [![Expo](https://img.shields.io/badge/Expo-52.0.11-black?logo=expo)](https://expo.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-A complete React Native Todo List application with full CRUD operations, built with Expo and integrated with a RESTful API backend. This project demonstrates modern mobile app development practices with clean architecture and responsive UI design.
+A complete React Native Todo List application with full CRUD operations and **real-time synchronization**, built with Expo and integrated with a RESTful API backend. This project demonstrates modern mobile app development practices with WebSocket-powered live updates across all connected devices.
 
 ## 📚 Documentation
 
@@ -20,7 +20,9 @@ A complete React Native Todo List application with full CRUD operations, built w
 - **Read Tasks**: Display all todos fetched from REST API with real-time updates
 - **Update Tasks**: Mark tasks as completed or uncompleted with a single tap
 - **Delete Tasks**: Remove tasks with confirmation to prevent accidental deletions
+- **Real-time Sync**: WebSocket-powered instant updates across all devices and platforms
 - **RESTful API Integration**: Seamless communication with backend microservices using Axios
+- **Socket.IO Client**: Bidirectional real-time communication with server
 - **Error Handling**: Comprehensive error alerts for network failures and API errors
 - **Clean UI**: Modern, minimalist design with clear visual feedback
 - **Cross-Platform**: Runs on iOS, Android, and Web platforms via Expo
@@ -48,6 +50,7 @@ A complete React Native Todo List application with full CRUD operations, built w
 
 - **React Native** - Cross-platform mobile framework
 - **Expo** - Development platform and toolchain
+- **Socket.IO Client** - Real-time bidirectional communication
 - **JavaScript** - Programming language
 - **Axios** - HTTP client for API requests
 - **REST API** - Backend integration (Node.js/Express/SQLite)
@@ -114,7 +117,92 @@ Follow these steps to get your development environment running:
     - Delete tasks by tapping "Delete"
     - All changes sync with the backend API
 
-## 📝 Code Highlights
+## 🔄 Real-time Synchronization
+
+This app implements WebSocket-based real-time synchronization with the backend server. Any changes made on one device instantly appear on all other connected devices.
+
+### Architecture Diagram
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│              Mobile App ↔ Backend Real-time Flow                     │
+└──────────────────────────────────────────────────────────────────────┘
+
+┌────────────────┐                                    ┌─────────────────┐
+│  React Native  │                                    │  Express Server │
+│   Mobile App   │                                    │   + Socket.IO   │
+└────────┬───────┘                                    └────────┬────────┘
+         │                                                     │
+         │ 1. Component Mount: useEffect()                    │
+         │────────────────────────────────────────────────────►│
+         │    io.connect('http://localhost:3000')             │
+         │                                                     │
+         │                         2. WebSocket Handshake     │
+         │◄────────────────────────────────────────────────────│
+         │                            Connection Established   │
+         │                                                     │
+         │ 3. User Action: addTodo()                          │
+         │────────────────────────────────────────────────────►│
+         │    axios.post('/todos', {title})                   │
+         │                                                     │
+         │                                  4. Save to SQLite  │
+         │                                         │           │
+         │ 5. HTTP Response                        ▼           │
+         │◄────────────────────────────────────────────────────│
+         │    {id: 1, title: "...", completed: 0}             │
+         │                                                     │
+         │                    6. Broadcast to ALL clients      │
+         │                         io.emit('todos-updated')    │
+         │                                                     │
+         │ 7. Receive Update via WebSocket                    │
+         │◄────────────────────────────────────────────────────│
+         │    socket.on('todos-updated', todos)               │
+         │                                                     │
+         │ 8. Update State: setTodos(updatedTodos)            │
+         │    → UI re-renders automatically                   │
+         │    → No manual refresh needed! ✓                   │
+         │                                                     │
+
+Key: ──► HTTP Request    ◄── HTTP Response    ◄──► WebSocket
+```
+
+### Client-Side Implementation
+
+```javascript
+// Initialize Socket.IO connection on app startup
+useEffect(() => {
+  const socketInstance = io(SOCKET_URL, {
+    transports: ['websocket'],
+    reconnection: true,
+  });
+
+  // Listen for real-time updates from server
+  socketInstance.on('todos-updated', (updatedTodos) => {
+    console.log('📡 Real-time update received');
+    setTodos(updatedTodos);
+  });
+
+  return () => {
+    socketInstance.disconnect(); // Cleanup on unmount
+  };
+}, []);
+```
+
+### Benefits
+
+- ✅ **Instant Updates** - Changes appear immediately without refresh
+- ✅ **Multi-device Sync** - Test on web browser, iOS, and Android simultaneously
+- ✅ **Automatic Reconnection** - Handles network interruptions gracefully
+- ✅ **No Manual Refresh** - Data stays current automatically
+
+### Testing Real-time Sync
+
+1. Start backend server: `node index.js` in backend directory
+2. Launch app on multiple platforms (web + mobile simultaneously)
+3. Make changes on one platform
+4. Watch updates appear instantly on all other platforms!
+
+## �📝 Code Highlights
 
 ### CRUD Operations with Axios
 
@@ -209,7 +297,7 @@ This project is licensed under the MIT License. See the LICENSE file for details
 
 ## 👨‍💻 Developer
 
-- **Mohammad Firman Syah** - [mohammadfirmansyah@example.com]
+- **Mohammad Firman Syah**
 - **Project Link:** [https://github.com/mohammadfirmansyah/myTodoApp](https://github.com/mohammadfirmansyah/myTodoApp)
 - **Backend Repository:** [https://github.com/mohammadfirmansyah/ltsqj-crud_todo_sqlite](https://github.com/mohammadfirmansyah/ltsqj-crud_todo_sqlite)
 
