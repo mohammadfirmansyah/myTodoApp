@@ -1,12 +1,30 @@
 {
   "name": "mytodoapp",
   "version": "1.0.0",
+  "description": "React Native mobile app with Socket.IO real-time synchronization, complete CRUD operations, and cross-platform support (iOS, Android, Web)",
   "main": "index.js",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web"
+  },
+  "keywords": [
+    "react-native",
+    "expo",
+    "todo-app",
+    "crud",
+    "mobile-app",
+    "cross-platform",
+    "socket-io",
+    "real-time",
+    "websocket"
+  ],
+  "author": "Mohammad Firman Syah",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mohammadfirmansyah/myTodoApp.git"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",

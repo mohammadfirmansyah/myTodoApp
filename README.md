@@ -1,8 +1,8 @@
 # 📝 My Todo App
 
 [![GitHub](https://img.shields.io/badge/GitHub-myTodoApp-blue?logo=github)](https://github.com/mohammadfirmansyah/myTodoApp)
-[![React Native](https://img.shields.io/badge/React_Native-0.76.3-blue?logo=react)](https://reactnative.dev/)
-[![Expo](https://img.shields.io/badge/Expo-52.0.11-black?logo=expo)](https://expo.dev/)
+[![React Native](https://img.shields.io/badge/React_Native-0.81.5-blue?logo=react)](https://reactnative.dev/)
+[![Expo](https://img.shields.io/badge/Expo-54.0.20-black?logo=expo)](https://expo.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 A complete React Native Todo List application with full CRUD operations and **real-time synchronization**, built with Expo and integrated with a RESTful API backend. This project demonstrates modern mobile app development practices with WebSocket-powered live updates across all connected devices.

@@ -13,8 +13,8 @@ A modern React Native todo application with Socket.IO real-time synchronization.
 
 ## 🛠️ Technical Stack
 
-- **React Native** - v0.76.3
-- **Expo SDK** - v52.0.11
+- **React Native** - v0.81.5
+- **Expo SDK** - v54.0.20
 - **Axios** - HTTP client for REST API
 - **Socket.IO Client** - Real-time WebSocket communication
 - **React Hooks** - useState, useEffect for state management

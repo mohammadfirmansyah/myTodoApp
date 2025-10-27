@@ -34,8 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cross-Platform**: Runs on iOS, Android, and Web via Expo
 
 ### Technical Details
-- React Native version: 0.76.3
-- Expo SDK version: 52.0.11
+- React Native version: 0.81.5
+- Expo SDK version: 54.0.20
 - Axios for HTTP requests
 - React Hooks (useState, useEffect) for state management
 - StyleSheet for component styling
