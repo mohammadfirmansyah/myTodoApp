@@ -1,5 +1,5 @@
 // App.js - Main Todo Application Component
-// This is a complete CRUD application demonstrating RESTful API integration
+// This is a complete CRUD application with real-time synchronization
 import React, { useState, useEffect } from 'react';
 import { 
   View, 
@@ -11,21 +11,57 @@ import {
   Alert 
 } from 'react-native';
 import axios from 'axios';
+import io from 'socket.io-client';
 
 // Configure the base API URL for our backend microservice
 // Replace this with your deployed API endpoint for production use
 const API_URL = 'http://localhost:3000/todos';
+const SOCKET_URL = 'http://localhost:3000';
 
 const App = () => {
   // State management for our todo list and new todo input
   // Using useState hook provides reactive updates to our UI
   const [todos, setTodos] = useState([]);
   const [newTodo, setNewTodo] = useState('');
+  const [socket, setSocket] = useState(null);
 
-  // Fetch todos when component mounts using useEffect hook
-  // The empty dependency array ensures this runs only once
+  // Initialize Socket.IO connection and fetch initial data
+  // This enables real-time synchronization across all clients
   useEffect(() => {
+    // Fetch initial todos from backend
     fetchTodos();
+
+    // Establish WebSocket connection for real-time updates
+    const socketInstance = io(SOCKET_URL, {
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
+
+    setSocket(socketInstance);
+
+    // Listen for real-time todo updates from server
+    // This fires whenever any client performs CRUD operations
+    socketInstance.on('todos-updated', (updatedTodos) => {
+      console.log('📡 Real-time update received');
+      setTodos(updatedTodos);
+    });
+
+    socketInstance.on('connect', () => {
+      console.log('✅ Connected to real-time server');
+    });
+
+    socketInstance.on('disconnect', () => {
+      console.log('❌ Disconnected from real-time server');
+    });
+
+    // Cleanup: disconnect socket when component unmounts
+    return () => {
+      if (socketInstance) {
+        socketInstance.disconnect();
+      }
+    };
   }, []);
 
   // Retrieve all todos from the backend API
@@ -41,41 +77,39 @@ const App = () => {
   };
 
   // Create a new todo item via POST request
-  // Input validation ensures we don't create empty todos
+  // No longer updates local state - real-time sync via Socket.IO
   const addTodo = async () => {
     if (!newTodo.trim()) return;
     try {
-      const response = await axios.post(API_URL, { title: newTodo });
-      // Update local state with the new todo including server-generated ID
-      setTodos([...todos, response.data]);
+      await axios.post(API_URL, { title: newTodo });
       // Clear input field after successful creation
       setNewTodo('');
+      // State update handled automatically by Socket.IO listener
     } catch (error) {
       Alert.alert('Error', 'Failed to add todo');
     }
   };
 
   // Remove a todo item using DELETE request
-  // Filters out the deleted item from local state for instant UI update
+  // No longer updates local state - real-time sync via Socket.IO
   const deleteTodo = async (id) => {
     try {
       await axios.delete(`${API_URL}/${id}`);
-      setTodos(todos.filter(todo => todo.id !== id));
+      // State update handled automatically by Socket.IO listener
     } catch (error) {
       Alert.alert('Error', 'Failed to delete todo');
     }
   };
 
   // Toggle todo completion status via PUT request
-  // This demonstrates updating existing resources with modified data
+  // No longer updates local state - real-time sync via Socket.IO
   const updateTodo = async (id) => {
     const todo = todos.find((t) => t.id === id);
     const updatedTodo = { ...todo, completed: !todo.completed };
 
     try {
       await axios.put(`${API_URL}/${id}`, updatedTodo);
-      // Map through todos array to update only the modified item
-      setTodos(todos.map((t) => (t.id === id ? updatedTodo : t)));
+      // State update handled automatically by Socket.IO listener
     } catch (error) {
       Alert.alert('Error', 'Failed to update todo');
     }
