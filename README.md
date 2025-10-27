@@ -11,6 +11,7 @@ A complete React Native Todo List application with full CRUD operations, built w
 
 - **[Contributing Guide](CONTRIBUTING.md)** - Learn how to contribute to this project
 - **[Changelog](CHANGELOG.md)** - Version history and release notes
+- **[Build Information](BUILD_INFO.md)** - Build and deployment guide
 - **[License](LICENSE)** - MIT License details
 
 ## ✨ Key Features
