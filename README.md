@@ -61,6 +61,7 @@ A complete React Native Todo List application with full CRUD operations and **re
 ```
 myTodoApp/
 ├── App.js              # Main application component with CRUD logic
+├── config.js           # API configuration for dev/production environments
 ├── package.json        # Dependencies and project configuration
 ├── app.json            # Expo configuration
 ├── babel.config.js     # Babel configuration for React Native
@@ -74,7 +75,6 @@ Before you begin, make sure you have the following installed:
 - **Node.js** >= 18.0
 - **npm** or **yarn**
 - **Expo CLI** (installed globally or via npx)
-- **Backend Server** running on `http://localhost:3000`
 
 Follow these steps to get your development environment running:
 
@@ -89,14 +89,19 @@ Follow these steps to get your development environment running:
     npm install
     ```
 
-3.  **Start the backend server:**
-    
-    Make sure your Todo API backend is running on port 3000. If you're using the `ltsqj-crud_todo_sqlite` backend:
-    ```bash
-    cd ../ltsqj-crud_todo_sqlite
-    npm install
-    node index.js
-    ```
+3.  **Configure API environment:**
+
+    By default, the app is configured to use the **production API** (no local backend needed).
+
+    - **For production use** (default): No additional setup required!
+    - **For local development**:
+      - Edit `config.js` and change `CURRENT_ENV` to `ENV.DEVELOPMENT`
+      - Start your local backend server:
+        ```bash
+        cd ../ltsqj-crud_todo_sqlite
+        npm install
+        node index.js
+        ```
 
 ## 💻 Usage / How to Run
 
@@ -264,21 +269,78 @@ This project is an excellent demonstration of:
 
 ## 🔧 API Configuration
 
-The app expects a REST API backend running at `http://localhost:3000/todos` with the following endpoints:
+### Environment-Based Configuration
+
+The app now supports dynamic API configuration through `config.js`, allowing seamless switching between development and production environments.
+
+#### Switching Between Environments
+
+Edit the `config.js` file and change the `CURRENT_ENV` constant:
+
+**For Production (Remote API):**
+```javascript
+// config.js
+const CURRENT_ENV = ENV.PRODUCTION; // Uses production API endpoint
+```
+
+**For Development (Local API):**
+```javascript
+// config.js
+const CURRENT_ENV = ENV.DEVELOPMENT; // Uses localhost:3000
+```
+
+#### Available Endpoints
+
+**Production API:**
+- Base URL: `https://todolist.220fii1j0spm.us-south.codeengine.appdomain.cloud`
+- Deployed on IBM Code Engine
+- No local backend required
+
+**Development API:**
+- Base URL: `http://localhost:3000`
+- Requires local backend server running
+
+#### API Endpoints
 
 - **GET** `/todos` - Fetch all todos
 - **POST** `/todos` - Create a new todo (body: `{ title: string }`)
 - **PUT** `/todos/:id` - Update a todo (body: `{ title: string, completed: boolean }`)
 - **DELETE** `/todos/:id` - Delete a todo
 
-You can modify the API URL in `App.js`:
+#### Adding Custom Endpoints
+
+You can easily add more API endpoints in `config.js`:
+
 ```javascript
-const API_URL = 'http://localhost:3000/todos';
+const API_CONFIG = {
+  [ENV.DEVELOPMENT]: {
+    API_URL: 'http://localhost:3000/todos',
+    SOCKET_URL: 'http://localhost:3000',
+    name: 'Local Development',
+  },
+  [ENV.PRODUCTION]: {
+    API_URL: 'https://your-production-api.com/todos',
+    SOCKET_URL: 'https://your-production-api.com',
+    name: 'Production',
+  },
+};
 ```
 
-**Note for Android Emulator**: Replace `localhost` with `10.0.2.2`:
+### Connection Features
+
+The app now includes:
+
+- **Connection Status Indicator** - Visual feedback showing connected/disconnected state
+- **Environment Display** - Shows which environment you're connected to (Development/Production)
+- **Error Handling** - Displays detailed error messages with retry option
+- **Loading States** - Shows loading spinner while fetching data
+- **Automatic Retry** - Retry button for failed connections
+- **Timeout Configuration** - 10-second timeout for API requests
+
+**Note for Android Emulator**: If using development mode, replace `localhost` with `10.0.2.2` in `config.js`:
 ```javascript
-const API_URL = 'http://10.0.2.2:3000/todos';
+API_URL: 'http://10.0.2.2:3000/todos',
+SOCKET_URL: 'http://10.0.2.2:3000',
 ```
 
 ## 🤝 Contributing
