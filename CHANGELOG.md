@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-10-28
+
+**GitHub Release:** [v1.1.0](https://github.com/mohammadfirmansyah/myTodoApp/releases/tag/v1.1.0)
+
+### Added
+- Socket.IO client integration for real-time synchronization
+- WebSocket-based live updates across all connected devices
+- Automatic UI refresh when backend data changes
+- Connection handling with automatic reconnection (5 attempts, 1s delay)
+- Real-time synchronization architecture diagrams in README
+- Socket.IO Client dependency (v4.8.1)
+
+### Fixed
+- Added missing package.json metadata (description, author, license, keywords, repository)
+- Corrected React Native version inconsistency from 0.76.3 to 0.81.5 across all documentation
+- Updated Expo SDK version from 52.0.11 to 54.0.20 in README, CHANGELOG, and release notes
+- Properly declared MIT license in package.json to match LICENSE file
+- Added GitHub repository URL for better npm package integration
+
+### Changed
+- Updated package.json with complete metadata for better discoverability
+- Ensured version consistency across package.json, app.json, and all documentation
+- Enhanced README with WebSocket communication flow diagrams
+
+### Developer
+- Mohammad Firman Syah
+
 ## [1.0.0] - 2025-10-27
 
 **GitHub Release:** [v1.0.0](https://github.com/mohammadfirmansyah/myTodoApp/releases/tag/v1.0.0)
