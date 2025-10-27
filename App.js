@@ -9,36 +9,31 @@ import {
   FlatList,
   StyleSheet,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  Switch,
+  ScrollView
 } from 'react-native';
 import axios from 'axios';
 import io from 'socket.io-client';
 
-// API Configuration - Change USE_PRODUCTION to switch environments
-// Set to true for production API, false for local development
-const USE_PRODUCTION = true;
-
-// API endpoint configurations
-const CONFIG = {
-  development: {
-    API_URL: 'http://localhost:3000/todos',
-    SOCKET_URL: 'http://localhost:3000',
-    name: 'Local Development',
-  },
-  production: {
-    API_URL: 'https://todolist.220fii1j0spm.us-south.codeengine.appdomain.cloud/todos',
-    SOCKET_URL: 'https://todolist.220fii1j0spm.us-south.codeengine.appdomain.cloud',
-    name: 'Production (IBM Code Engine)',
-  },
-};
-
-// Select current configuration based on USE_PRODUCTION flag
-const currentConfig = USE_PRODUCTION ? CONFIG.production : CONFIG.development;
-const API_URL = currentConfig.API_URL;
-const SOCKET_URL = currentConfig.SOCKET_URL;
-const ENVIRONMENT_NAME = currentConfig.name;
-
 const App = () => {
+  // API Configuration State - User can switch between local and custom server
+  const [useLocalServer, setUseLocalServer] = useState(false);
+  const [customServerUrl, setCustomServerUrl] = useState('https://todolist.220fii1j0spm.us-south.codeengine.appdomain.cloud');
+  const [localServerUrl] = useState('http://localhost:3000');
+  const [showSettings, setShowSettings] = useState(false);
+  
+  // Derived API URLs based on current configuration
+  const API_URL = useLocalServer 
+    ? `${localServerUrl}/todos` 
+    : `${customServerUrl}/todos`;
+  const SOCKET_URL = useLocalServer 
+    ? localServerUrl 
+    : customServerUrl;
+  const ENVIRONMENT_NAME = useLocalServer 
+    ? 'Local Server' 
+    : 'Remote Server';
+
   // State management for our todo list and new todo input
   // Using useState hook provides reactive updates to our UI
   const [todos, setTodos] = useState([]);
@@ -47,10 +42,38 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState(null);
+  const [debugLogs, setDebugLogs] = useState([]);
+  const [showDebug, setShowDebug] = useState(false);
+
+  // Add debug log entry with timestamp
+  const addDebugLog = (message, type = 'info') => {
+    const timestamp = new Date().toLocaleTimeString();
+    const logEntry = `[${timestamp}] ${type.toUpperCase()}: ${message}`;
+    console.log(logEntry);
+    setDebugLogs(prev => [...prev.slice(-49), logEntry]); // Keep last 50 logs
+  };
 
   // Initialize Socket.IO connection and fetch initial data
   // This enables real-time synchronization across all clients
+  // Reconnects when server URL changes
   useEffect(() => {
+    addDebugLog(`Configuration changed - Server: ${useLocalServer ? 'Local' : 'Remote'}`, 'config');
+    addDebugLog(`API URL: ${API_URL}`, 'config');
+    addDebugLog(`Socket URL: ${SOCKET_URL}`, 'config');
+
+    // Disconnect existing socket if any
+    if (socket) {
+      addDebugLog('Disconnecting previous socket connection', 'socket');
+      socket.removeAllListeners(); // Clean up all listeners
+      socket.disconnect();
+      setSocket(null);
+      setIsConnected(false);
+    }
+
+    // Reset state when switching servers
+    setConnectionError(null);
+    setTodos([]);
+    
     // Fetch initial todos from backend
     fetchTodos();
 
@@ -58,7 +81,7 @@ const App = () => {
     // For HTTPS endpoints, Socket.IO automatically uses WSS (secure WebSocket)
     // Production environments may require long-polling as primary transport
     const socketInstance = io(SOCKET_URL, {
-      transports: USE_PRODUCTION ? ['polling'] : ['websocket', 'polling'],
+      transports: !useLocalServer ? ['polling'] : ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 2000,
@@ -69,53 +92,55 @@ const App = () => {
       rememberUpgrade: true,
     });
 
+    addDebugLog(`Creating socket connection to ${SOCKET_URL}`, 'socket');
     setSocket(socketInstance);
 
     // Listen for real-time todo updates from server
     // This fires whenever any client performs CRUD operations
     socketInstance.on('todos-updated', (updatedTodos) => {
-      console.log('📡 Real-time update received:', updatedTodos);
-      console.log('📊 Number of todos received:', updatedTodos?.length || 0);
+      addDebugLog(`Real-time update received: ${updatedTodos?.length || 0} todos`, 'socket');
       setTodos(updatedTodos);
     });
 
     socketInstance.on('connect', () => {
-      console.log('✅ Connected to real-time server');
-      console.log('🔗 Socket ID:', socketInstance.id);
-      console.log('🚀 Transport:', socketInstance.io.engine.transport.name);
+      const transport = socketInstance.io.engine.transport.name;
+      addDebugLog(`Connected! Socket ID: ${socketInstance.id}`, 'socket');
+      addDebugLog(`Transport: ${transport}`, 'socket');
       setIsConnected(true);
       setConnectionError(null);
       // Refetch todos when reconnected to ensure sync
       fetchTodos();
     });
 
-    socketInstance.on('disconnect', () => {
-      console.log('❌ Disconnected from real-time server');
+    socketInstance.on('disconnect', (reason) => {
+      addDebugLog(`Disconnected - Reason: ${reason}`, 'socket');
       setIsConnected(false);
     });
 
     socketInstance.on('connect_error', (error) => {
-      console.log('⚠️ Connection error:', error.message);
-      console.log('⚠️ Using fallback: manual polling via HTTP');
+      addDebugLog(`Connection error: ${error.message}`, 'error');
+      addDebugLog('Using fallback: manual polling via HTTP', 'warn');
       setIsConnected(false);
       setConnectionError(error.message);
     });
 
     socketInstance.on('reconnect_attempt', (attemptNumber) => {
-      console.log('🔄 Reconnection attempt:', attemptNumber);
+      addDebugLog(`Reconnection attempt #${attemptNumber}`, 'socket');
     });
 
     socketInstance.io.engine.on('upgrade', (transport) => {
-      console.log('⬆️ Transport upgraded to:', transport.name);
+      addDebugLog(`Transport upgraded to: ${transport.name}`, 'socket');
     });
 
-    // Cleanup: disconnect socket when component unmounts
+    // Cleanup: disconnect socket when component unmounts or URL changes
     return () => {
       if (socketInstance) {
+        addDebugLog('Cleaning up socket connection', 'socket');
+        socketInstance.removeAllListeners();
         socketInstance.disconnect();
       }
     };
-  }, []);
+  }, [useLocalServer, customServerUrl]); // Reconnect when server configuration changes
 
   // Retrieve all todos from the backend API
   // This function uses async/await for cleaner asynchronous code
@@ -123,15 +148,21 @@ const App = () => {
     try {
       setIsLoading(true);
       setConnectionError(null);
-      console.log('🔄 Fetching todos from:', API_URL);
+      addDebugLog(`Fetching todos from: ${API_URL}`, 'api');
 
       const response = await axios.get(API_URL, {
         timeout: 10000, // 10 second timeout
       });
 
-      console.log('✅ Fetch successful, status:', response.status);
-      console.log('📦 Response data:', response.data);
-      console.log('📊 Number of todos:', response.data?.length || 0);
+      addDebugLog(`Fetch successful! Status: ${response.status}`, 'api');
+      addDebugLog(`Received ${response.data?.length || 0} todos`, 'api');
+      
+      // Log each todo for debugging
+      if (response.data && response.data.length > 0) {
+        response.data.forEach((todo, index) => {
+          addDebugLog(`Todo ${index + 1}: ${todo.title} (ID: ${todo.id}, Completed: ${todo.completed})`, 'data');
+        });
+      }
 
       setTodos(response.data);
       setConnectionError(null);
@@ -141,8 +172,8 @@ const App = () => {
                           error.message ||
                           'Failed to fetch todos';
       setConnectionError(errorMessage);
-      console.error('❌ Fetch error:', errorMessage);
-      console.error('📋 Full error:', error);
+      addDebugLog(`Fetch error: ${errorMessage}`, 'error');
+      addDebugLog(`Error details: ${error.code || 'Unknown'}`, 'error');
       Alert.alert('Connection Error', `Unable to connect to API: ${errorMessage}`);
     } finally {
       setIsLoading(false);
@@ -152,22 +183,26 @@ const App = () => {
   // Create a new todo item via POST request
   // After successful creation, state will be updated via Socket.IO or manual refetch
   const addTodo = async () => {
-    if (!newTodo.trim()) return;
+    if (!newTodo.trim()) {
+      addDebugLog('Add todo skipped: empty input', 'warn');
+      return;
+    }
+    
     try {
-      console.log('➕ Adding new todo:', newTodo);
+      addDebugLog(`Adding new todo: "${newTodo}"`, 'api');
       const response = await axios.post(API_URL, { title: newTodo });
-      console.log('✅ Todo added:', response.data);
+      addDebugLog(`Todo added successfully! ID: ${response.data.id}`, 'api');
 
       // Clear input field after successful creation
       setNewTodo('');
 
       // If Socket.IO doesn't update, manually refetch as fallback
       setTimeout(() => {
-        console.log('🔄 Fallback: Refetching todos after add');
+        addDebugLog('Fallback: Refetching todos after add', 'fallback');
         fetchTodos();
       }, 300);
     } catch (error) {
-      console.error('❌ Failed to add todo:', error);
+      addDebugLog(`Failed to add todo: ${error.message}`, 'error');
       Alert.alert('Error', 'Failed to add todo');
     }
   };
@@ -176,17 +211,17 @@ const App = () => {
   // After successful deletion, state will be updated via Socket.IO or manual refetch
   const deleteTodo = async (id) => {
     try {
-      console.log('🗑️ Deleting todo:', id);
+      addDebugLog(`Deleting todo ID: ${id}`, 'api');
       await axios.delete(`${API_URL}/${id}`);
-      console.log('✅ Todo deleted:', id);
+      addDebugLog(`Todo deleted successfully! ID: ${id}`, 'api');
 
       // If Socket.IO doesn't update, manually refetch as fallback
       setTimeout(() => {
-        console.log('🔄 Fallback: Refetching todos after delete');
+        addDebugLog('Fallback: Refetching todos after delete', 'fallback');
         fetchTodos();
       }, 300);
     } catch (error) {
-      console.error('❌ Failed to delete todo:', error);
+      addDebugLog(`Failed to delete todo: ${error.message}`, 'error');
       Alert.alert('Error', 'Failed to delete todo');
     }
   };
@@ -195,22 +230,25 @@ const App = () => {
   // After successful update, state will be updated via Socket.IO or manual refetch
   const updateTodo = async (id) => {
     const todo = todos.find((t) => t.id === id);
-    if (!todo) return;
+    if (!todo) {
+      addDebugLog(`Update failed: Todo ID ${id} not found`, 'error');
+      return;
+    }
 
     const updatedTodo = { ...todo, completed: !todo.completed };
 
     try {
-      console.log('✏️ Updating todo:', id, updatedTodo);
+      addDebugLog(`Updating todo ID: ${id} to ${updatedTodo.completed ? 'completed' : 'active'}`, 'api');
       await axios.put(`${API_URL}/${id}`, updatedTodo);
-      console.log('✅ Todo updated:', id);
+      addDebugLog(`Todo updated successfully! ID: ${id}`, 'api');
 
       // If Socket.IO doesn't update, manually refetch as fallback
       setTimeout(() => {
-        console.log('🔄 Fallback: Refetching todos after update');
+        addDebugLog('Fallback: Refetching todos after update', 'fallback');
         fetchTodos();
       }, 300);
     } catch (error) {
-      console.error('❌ Failed to update todo:', error);
+      addDebugLog(`Failed to update todo: ${error.message}`, 'error');
       Alert.alert('Error', 'Failed to update todo');
     }
   };
@@ -222,6 +260,69 @@ const App = () => {
       {/* Header title for the application */}
       <Text style={styles.title}>To-Do List</Text>
 
+      {/* Settings toggle button */}
+      <Pressable 
+        style={styles.settingsButton} 
+        onPress={() => setShowSettings(!showSettings)}
+      >
+        <Text style={styles.settingsButtonText}>
+          {showSettings ? '▼ Hide Settings' : '▶ Show Settings'}
+        </Text>
+      </Pressable>
+
+      {/* Server Configuration Settings */}
+      {showSettings && (
+        <View style={styles.settingsContainer}>
+          <Text style={styles.settingsTitle}>Server Configuration</Text>
+          
+          {/* Toggle between Local and Remote Server */}
+          <View style={styles.switchContainer}>
+            <Text style={styles.switchLabel}>
+              {useLocalServer ? '🏠 Local Server' : '☁️ Remote Server'}
+            </Text>
+            <Switch
+              value={useLocalServer}
+              onValueChange={(value) => {
+                setUseLocalServer(value);
+                console.log('🔄 Switching to:', value ? 'Local' : 'Remote');
+              }}
+              trackColor={{ false: '#2196F3', true: '#4caf50' }}
+              thumbColor={useLocalServer ? '#fff' : '#fff'}
+            />
+          </View>
+
+          {/* Custom Server URL Input (only for remote) */}
+          {!useLocalServer && (
+            <View style={styles.urlInputContainer}>
+              <Text style={styles.urlLabel}>Remote Server URL:</Text>
+              <TextInput
+                style={styles.urlInput}
+                placeholder="https://your-server.com"
+                placeholderTextColor="#999"
+                value={customServerUrl}
+                onChangeText={setCustomServerUrl}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+          )}
+
+          {/* Local Server URL Display (read-only) */}
+          {useLocalServer && (
+            <View style={styles.urlDisplayContainer}>
+              <Text style={styles.urlLabel}>Local Server URL:</Text>
+              <Text style={styles.urlDisplay}>{localServerUrl}</Text>
+            </View>
+          )}
+
+          {/* Current Active URL */}
+          <View style={styles.activeUrlContainer}>
+            <Text style={styles.activeUrlLabel}>Active API:</Text>
+            <Text style={styles.activeUrl}>{API_URL}</Text>
+          </View>
+        </View>
+      )}
+
       {/* Connection status indicator */}
       <View style={styles.statusContainer}>
         <View style={[
@@ -232,6 +333,53 @@ const App = () => {
           {isConnected ? 'Connected' : 'Disconnected'} - {ENVIRONMENT_NAME}
         </Text>
       </View>
+
+      {/* Debug Panel Toggle Button */}
+      <Pressable 
+        style={styles.debugButton} 
+        onPress={() => setShowDebug(!showDebug)}
+      >
+        <Text style={styles.debugButtonText}>
+          {showDebug ? '▼ Hide Debug Logs' : '▶ Show Debug Logs'} ({debugLogs.length})
+        </Text>
+      </Pressable>
+
+      {/* Debug Logs Panel */}
+      {showDebug && (
+        <View style={styles.debugContainer}>
+          <View style={styles.debugHeader}>
+            <Text style={styles.debugTitle}>🔍 Debug Logs (Last 50)</Text>
+            <Pressable 
+              style={styles.clearLogsButton}
+              onPress={() => {
+                setDebugLogs([]);
+                addDebugLog('Debug logs cleared', 'system');
+              }}
+            >
+              <Text style={styles.clearLogsText}>Clear</Text>
+            </Pressable>
+          </View>
+          <FlatList
+            data={[...debugLogs].reverse()} // Show newest first
+            style={styles.debugList}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => {
+              let logColor = '#333';
+              if (item.includes('ERROR:')) logColor = '#f44336';
+              else if (item.includes('WARN:')) logColor = '#ff9800';
+              else if (item.includes('API:')) logColor = '#2196F3';
+              else if (item.includes('SOCKET:')) logColor = '#4caf50';
+              else if (item.includes('CONFIG:')) logColor = '#9c27b0';
+              else if (item.includes('DATA:')) logColor = '#00bcd4';
+              else if (item.includes('FALLBACK:')) logColor = '#ff5722';
+              
+              return (
+                <Text style={[styles.debugLog, { color: logColor }]}>{item}</Text>
+              );
+            }}
+          />
+        </View>
+      )}
 
       {/* Show error message and retry button if connection fails */}
       {connectionError && (
@@ -255,11 +403,17 @@ const App = () => {
 
       {/* Input field for new todo entries */}
       {/* Controlled component pattern: value and onChange handler */}
+      {/* Key prop forces re-render when switching servers to ensure consistency */}
       <TextInput
+        key={`todo-input-${useLocalServer ? 'local' : 'remote'}`}
         style={styles.input}
-        placeholder="New To-Do"
+        placeholder="Enter new todo..."
+        placeholderTextColor="#999"
         value={newTodo}
         onChangeText={setNewTodo}
+        autoCapitalize="sentences"
+        returnKeyType="done"
+        onSubmitEditing={addTodo}
       />
 
       {/* Add button triggers todo creation */}
@@ -430,6 +584,162 @@ const styles = StyleSheet.create({
   buttonText: {
     color: 'blue',
     marginLeft: 10,
+  },
+  // Settings toggle button
+  settingsButton: {
+    backgroundColor: '#2196F3',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  settingsButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  // Settings container with card-like appearance
+  settingsContainer: {
+    backgroundColor: '#f5f5f5',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  settingsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#333',
+  },
+  // Switch container for server toggle
+  switchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    backgroundColor: 'white',
+    borderRadius: 5,
+  },
+  switchLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  // URL input container
+  urlInputContainer: {
+    marginBottom: 15,
+  },
+  urlLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 5,
+  },
+  urlInput: {
+    height: 45,
+    borderColor: '#2196F3',
+    borderWidth: 2,
+    borderRadius: 5,
+    paddingHorizontal: 12,
+    backgroundColor: 'white',
+    fontSize: 14,
+    color: '#333',
+  },
+  // URL display for local server (read-only)
+  urlDisplayContainer: {
+    marginBottom: 15,
+  },
+  urlDisplay: {
+    fontSize: 14,
+    color: '#4caf50',
+    fontWeight: '600',
+    backgroundColor: 'white',
+    padding: 12,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#4caf50',
+  },
+  // Active URL display
+  activeUrlContainer: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 5,
+    borderLeftWidth: 4,
+    borderLeftColor: '#2196F3',
+  },
+  activeUrlLabel: {
+    fontSize: 11,
+    color: '#666',
+    marginBottom: 3,
+    textTransform: 'uppercase',
+    fontWeight: 'bold',
+  },
+  activeUrl: {
+    fontSize: 12,
+    color: '#1976d2',
+    fontWeight: '600',
+  },
+  // Debug panel styles
+  debugButton: {
+    backgroundColor: '#ff9800',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  debugButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 13,
+  },
+  debugContainer: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    maxHeight: 250,
+  },
+  debugHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 10,
+    backgroundColor: '#e0e0e0',
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#bdbdbd',
+  },
+  debugTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  clearLogsButton: {
+    backgroundColor: '#f44336',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 4,
+  },
+  clearLogsText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  debugList: {
+    padding: 10,
+  },
+  debugLog: {
+    fontSize: 11,
+    fontFamily: 'monospace',
+    marginBottom: 4,
+    lineHeight: 16,
   },
 });
 
