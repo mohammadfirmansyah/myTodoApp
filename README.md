@@ -7,6 +7,12 @@
 
 A complete React Native Todo List application with full CRUD operations, built with Expo and integrated with a RESTful API backend. This project demonstrates modern mobile app development practices with clean architecture and responsive UI design.
 
+## 📚 Documentation
+
+- **[Contributing Guide](CONTRIBUTING.md)** - Learn how to contribute to this project
+- **[Changelog](CHANGELOG.md)** - Version history and release notes
+- **[License](LICENSE)** - MIT License details
+
 ## ✨ Key Features
 
 - **Create Tasks**: Add new todo items through an intuitive input interface
