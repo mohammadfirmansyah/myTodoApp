@@ -1,22 +1,22 @@
 // App.js - Main Todo Application Component
 // This is a complete CRUD application with real-time synchronization
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  Pressable, 
-  FlatList, 
-  StyleSheet, 
-  Alert 
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  FlatList,
+  StyleSheet,
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import axios from 'axios';
 import io from 'socket.io-client';
+import { API_URL, SOCKET_URL, ENVIRONMENT_NAME } from './config';
 
-// Configure the base API URL for our backend microservice
-// Replace this with your deployed API endpoint for production use
-const API_URL = 'http://localhost:3000/todos';
-const SOCKET_URL = 'http://localhost:3000';
+// API configuration is now managed in config.js
+// Switch between development and production by changing CURRENT_ENV in config.js
 
 const App = () => {
   // State management for our todo list and new todo input
@@ -24,6 +24,9 @@ const App = () => {
   const [todos, setTodos] = useState([]);
   const [newTodo, setNewTodo] = useState('');
   const [socket, setSocket] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
+  const [connectionError, setConnectionError] = useState(null);
 
   // Initialize Socket.IO connection and fetch initial data
   // This enables real-time synchronization across all clients
@@ -33,10 +36,11 @@ const App = () => {
 
     // Establish WebSocket connection for real-time updates
     const socketInstance = io(SOCKET_URL, {
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
+      timeout: 10000,
     });
 
     setSocket(socketInstance);
@@ -50,10 +54,19 @@ const App = () => {
 
     socketInstance.on('connect', () => {
       console.log('✅ Connected to real-time server');
+      setIsConnected(true);
+      setConnectionError(null);
     });
 
     socketInstance.on('disconnect', () => {
       console.log('❌ Disconnected from real-time server');
+      setIsConnected(false);
+    });
+
+    socketInstance.on('connect_error', (error) => {
+      console.log('⚠️ Connection error:', error.message);
+      setIsConnected(false);
+      setConnectionError(error.message);
     });
 
     // Cleanup: disconnect socket when component unmounts
@@ -68,11 +81,23 @@ const App = () => {
   // This function uses async/await for cleaner asynchronous code
   const fetchTodos = async () => {
     try {
-      const response = await axios.get(API_URL);
+      setIsLoading(true);
+      setConnectionError(null);
+      const response = await axios.get(API_URL, {
+        timeout: 10000, // 10 second timeout
+      });
       setTodos(response.data);
+      setConnectionError(null);
     } catch (error) {
       // Display user-friendly error message if network request fails
-      Alert.alert('Error', 'Failed to fetch todos');
+      const errorMessage = error.response?.data?.error ||
+                          error.message ||
+                          'Failed to fetch todos';
+      setConnectionError(errorMessage);
+      console.error('Fetch error:', errorMessage);
+      Alert.alert('Connection Error', `Unable to connect to API: ${errorMessage}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -121,6 +146,37 @@ const App = () => {
     <View style={styles.container}>
       {/* Header title for the application */}
       <Text style={styles.title}>To-Do List</Text>
+
+      {/* Connection status indicator */}
+      <View style={styles.statusContainer}>
+        <View style={[
+          styles.statusDot,
+          { backgroundColor: isConnected ? '#4caf50' : '#f44336' }
+        ]} />
+        <Text style={styles.statusText}>
+          {isConnected ? 'Connected' : 'Disconnected'} - {ENVIRONMENT_NAME}
+        </Text>
+      </View>
+
+      {/* Show error message and retry button if connection fails */}
+      {connectionError && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>
+            Error: {connectionError}
+          </Text>
+          <Pressable style={styles.retryButton} onPress={fetchTodos}>
+            <Text style={styles.retryButtonText}>Retry Connection</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* Loading indicator while fetching data */}
+      {isLoading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2196F3" />
+          <Text style={styles.loadingText}>Loading todos...</Text>
+        </View>
+      )}
 
       {/* Input field for new todo entries */}
       {/* Controlled component pattern: value and onChange handler */}
@@ -182,7 +238,68 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 10,
+  },
+  // Connection status indicator container
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+    padding: 10,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 5,
+  },
+  // Status indicator dot (green for connected, red for disconnected)
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 8,
+  },
+  // Status text styling
+  statusText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  // Error message container with warning colors
+  errorContainer: {
+    backgroundColor: '#ffebee',
+    padding: 15,
+    borderRadius: 5,
+    marginBottom: 15,
+    borderLeftWidth: 4,
+    borderLeftColor: '#f44336',
+  },
+  // Error text styling for better readability
+  errorText: {
+    color: '#c62828',
+    marginBottom: 10,
+    fontSize: 13,
+  },
+  // Retry button styling
+  retryButton: {
+    backgroundColor: '#f44336',
+    padding: 8,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  // Retry button text
+  retryButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  // Loading indicator container
+  loadingContainer: {
+    alignItems: 'center',
+    padding: 20,
+    marginBottom: 15,
+  },
+  // Loading text below spinner
+  loadingText: {
+    marginTop: 10,
+    color: '#666',
+    fontSize: 14,
   },
   // Input field with border for clear visual boundaries
   input: {
