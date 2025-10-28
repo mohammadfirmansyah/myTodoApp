@@ -1,6 +1,6 @@
 {
   "name": "mytodoapp",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "React Native mobile app with Socket.IO real-time synchronization, complete CRUD operations, and cross-platform support (iOS, Android, Web)",
   "main": "index.js",
   "scripts": {

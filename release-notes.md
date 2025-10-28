@@ -1,43 +1,42 @@
-# 🎉 My Todo App v1.1.0 - Real-time Synchronization
+# 🎉 My Todo App v1.2.0 - Enhanced Configuration & Debugging
 
-A modern React Native todo application with Socket.IO real-time synchronization. This minor release introduces WebSocket-based live updates, ensuring all connected devices stay synchronized automatically.
+A modern React Native todo application with **built-in Settings UI** and **comprehensive debugging tools**. This release introduces dynamic server configuration and real-time event monitoring without requiring code changes.
 
-## ✨ What's New (v1.1.0)
+## ✨ What's New (v1.2.0)
 
-- **Real-time Synchronization**: Socket.IO client integration for instant updates across all devices
-- **WebSocket Communication**: Bidirectional event-based updates using `todos-updated` events
-- **Live State Management**: Automatic UI refresh when backend data changes from any client
-- **Connection Handling**: Automatic reconnection with configurable retry attempts
-- **Architecture Documentation**: Added detailed real-time sync flow diagrams to README
+- **Settings Panel UI**: Toggle between local/remote servers directly in the app - no code changes needed!
+- **Custom Remote Server URL**: Edit remote server URL for testing different production environments
+- **Debug Panel**: Color-coded logging system with 7 event types (API/SOCKET/CONFIG/DATA/ERROR/FALLBACK/WARN)
+- **Real-time Monitoring**: Watch API calls and Socket.IO events as they happen with timestamps
+- **Dynamic Configuration**: Switch environments instantly with toggle buttons
+- **Platform Detection**: Automatic Android emulator detection (10.0.2.2 vs localhost)
 
 ## 🐛 Bug Fixes
 
-- **Package Metadata**: Added missing description, author, license, keywords, and repository information to package.json
-- **Version Consistency**: Corrected React Native version from 0.76.3 to 0.81.5 across all documentation
-- **Expo SDK Version**: Updated from 52.0.11 to 54.0.20 in README, CHANGELOG, and release notes
-- **License Declaration**: Properly declared MIT license in package.json to match LICENSE file
+- **Input Consistency**: Fixed input field not clearing when switching servers (added key prop for forced re-render)
+- **Socket.IO Production**: Improved connection stability with polling transport for production environments
+- **Faster Fallback**: Reduced fallback timeout from default to 300ms for better UX
+- **Memory Leaks**: Proper socket cleanup with removeAllListeners() on configuration changes
+
+## 🗑️ Removed
+
+- **config.js file**: Replaced with intuitive Settings UI - no more manual file editing
+- **Nested folder**: Removed duplicate myTodoApp/myTodoApp/ structure for cleaner project
 
 ## 📚 Documentation
 
-- Added real-time synchronization architecture diagrams
-- Updated all documentation with accurate dependency versions
-- Improved README with WebSocket flow explanations
+- Updated README with Settings UI and Debug Panel documentation
+- Fixed version numbers (React Native 0.81.5, Expo 54.0.20)
+- Added Dynamic Server Configuration code examples
+- Removed all outdated config.js references
 
 ## 🛠️ Technical Stack
 
 - **React Native** - v0.81.5
 - **Expo SDK** - v54.0.20
-- **Axios** - HTTP client for REST API
-- **Socket.IO Client** - v4.8.1 (NEW)
+- **Socket.IO Client** - v4.8.1
+- **Axios** - v1.12.2
 - **React Hooks** - useState, useEffect for state management
-
-## 📋 Dependencies Added
-
-```json
-{
-  "socket.io-client": "^4.8.1"
-}
-```
 
 ## 🚀 Quick Start
 
@@ -46,21 +45,24 @@ npm install
 npm start
 ```
 
-**Note**: Ensure backend server with Socket.IO is running on `http://localhost:3000`
+Open the app and use the **Settings Panel** at the top to configure your server!
 
 ## 📦 What's Included
 
-- ✅ Complete React Native application with real-time sync
-- ✅ Socket.IO client for WebSocket communication
-- ✅ Full CRUD implementation with Axios
-- ✅ Automatic state synchronization across devices
-- ✅ Comprehensive documentation suite
-- ✅ Multi-platform support (iOS, Android, Web)
-- ✅ Accurate package metadata for npm compatibility
+- ✅ Settings UI for runtime server configuration
+- ✅ Debug Panel with 50-log buffer and color-coded events
+- ✅ Real-time Socket.IO synchronization
+- ✅ Full CRUD operations with REST API
+- ✅ Cross-platform support (iOS, Android, Web)
+- ✅ Comprehensive documentation
 
-## 🔄 Migration Notes
+## 🔄 Migration from v1.1.0
 
-No breaking changes. Existing installations will continue to work. The Socket.IO dependency will be installed automatically with `npm install`.
+1. Delete `config.js` if you have it (no longer needed)
+2. Run `npm install` to ensure dependencies are up to date
+3. Use the new Settings UI in the app to configure your server
+
+No breaking changes - all existing functionality preserved!
 
 ---
 
