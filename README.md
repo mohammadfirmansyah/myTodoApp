@@ -16,38 +16,16 @@ A complete React Native Todo List application with full CRUD operations and **re
 
 ## ✨ Key Features
 
-- **Create Tasks**: Add new todo items through an intuitive input interface
-- **Read Tasks**: Display all todos fetched from REST API with real-time updates
-- **Update Tasks**: Mark tasks as completed or uncompleted with a single tap
-- **Delete Tasks**: Remove tasks with confirmation to prevent accidental deletions
-- **Real-time Sync**: WebSocket-powered instant updates across all devices and platforms
-- **Server Switcher**: Toggle between local and remote servers with live configuration UI
-- **Debug Panel**: Comprehensive real-time logging system with color-coded event tracking
-- **RESTful API Integration**: Seamless communication with backend microservices using Axios
-- **Socket.IO Client**: Bidirectional real-time communication with server
-- **Error Handling**: Comprehensive error alerts for network failures and API errors
-- **Fallback Mechanism**: Automatic data refresh if WebSocket connection fails
-- **Clean UI**: Modern, minimalist design with clear visual feedback
-- **Cross-Platform**: Runs on iOS, Android, and Web platforms via Expo
+- **Real-time Sync**: WebSocket connection for instant updates across clients.
+- **Dual Server Config**: Switch between local and remote servers for flexible development.
+- **Comprehensive Debugging**: In-app debug panel to monitor logs and connection status.
+- **CRUD Operations**: Full create, read, update, and delete functionality.
+- **Error Handling**: Graceful error handling with user-friendly alerts.
+- **Loading States**: Visual feedback during data fetching.
 
-## 📱 Screenshots / Demo
+## 📱 App Preview
 
-```
-┌─────────────────────────────────┐
-│     📝 To-Do List              │
-├─────────────────────────────────┤
-│  [New To-Do____________] [Add]  │
-├─────────────────────────────────┤
-│  ☐ Take clothes for laundry     │
-│     [Complete] [Delete]         │
-├─────────────────────────────────┤
-│  ☑ Buy groceries                │
-│     [Unmark] [Delete]           │
-├─────────────────────────────────┤
-│  ☐ Finish homework              │
-│     [Complete] [Delete]         │
-└─────────────────────────────────┘
-```
+![React Native Todo App Preview](assets/images/app-preview.svg)
 
 ## 🛠️ Technologies Used
 

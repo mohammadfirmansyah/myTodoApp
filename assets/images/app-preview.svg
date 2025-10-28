@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="710" viewBox="0 0 400 710">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .header-text { font-family: 'Segoe UI', sans-serif; font-size: 24px; font-weight: bold; fill: #000000; }
+      .btn { fill: #2196F3; rx: 5px; }
+      .btn-debug { fill: #ff9800; rx: 5px; }
+      .btn-text { font-family: 'Segoe UI', sans-serif; font-size: 14px; font-weight: bold; fill: #ffffff; }
+      .settings-bg { fill: #f5f5f5; rx: 8px; stroke: #dddddd; }
+      .settings-title { font-family: 'Segoe UI', sans-serif; font-size: 16px; font-weight: bold; fill: #333333; }
+      .status-bar { fill: #f5f5f5; rx: 5px; }
+      .status-text { font-family: 'Segoe UI', sans-serif; font-size: 12px; fill: #666666; }
+      .status-dot-connected { fill: #4caf50; }
+      .input-field { fill: #ffffff; stroke: #cccccc; rx: 0px; }
+      .input-text { font-family: 'Segoe UI', sans-serif; font-size: 14px; fill: #999999; }
+      .counter-text { font-family: 'Segoe UI', sans-serif; font-size: 12px; fill: #999999; font-style: italic; }
+      .todo-item { fill: #f9f9f9; stroke-width: 1px; stroke: #dddddd; stroke-dasharray: 0 0 100% 0; }
+      .todo-text { font-family: 'Segoe UI', sans-serif; font-size: 16px; fill: #000000; }
+      .todo-text-completed { text-decoration: line-through; fill: #999999; }
+      .link-text { font-family: 'Segoe UI', sans-serif; font-size: 14px; fill: #0000ff; }
+    </style>
+  </defs>
+
+  <!-- Main Background -->
+  <rect class="bg" width="400" height="710"/>
+
+  <g transform="translate(20, 20)">
+    <!-- Header -->
+    <text class="header-text" x="5" y="35">To-Do List</text>
+    
+    <!-- Settings Button -->
+    <g transform="translate(0, 70)">
+      <rect class="btn" width="360" height="40"/>
+      <text class="btn-text" x="180" y="25" text-anchor="middle">▶ Show Settings</text>
+    </g>
+
+    <!-- Status Bar -->
+    <g transform="translate(0, 120)">
+      <rect class="status-bar" width="360" height="40"/>
+      <circle class="status-dot-connected" cx="25" cy="20" r="5"/>
+      <text class="status-text" x="45" y="25">Connected - Remote Server</text>
+    </g>
+
+    <!-- Debug Button -->
+    <g transform="translate(0, 170)">
+      <rect class="btn-debug" width="360" height="40"/>
+      <text class="btn-text" x="180" y="25" text-anchor="middle">▶ Show Debug Logs (12)</text>
+    </g>
+
+    <!-- Input Field -->
+    <g transform="translate(0, 225)">
+      <rect class="input-field" width="360" height="40"/>
+      <text class="input-text" x="10" y="25">Enter new todo...</text>
+    </g>
+
+    <!-- Add Button -->
+    <g transform="translate(0, 280)">
+      <rect class="btn" width="360" height="40"/>
+      <text class="btn-text" x="180" y="25" text-anchor="middle">Add To-Do</text>
+    </g>
+
+    <!-- Todo Counter -->
+    <text class="counter-text" x="5" y="340">Total Todos: 2</text>
+
+    <!-- Todo List -->
+    <g transform="translate(0, 355)">
+      <!-- Item 1 -->
+      <rect class="todo-item" width="360" height="50"/>
+      <text class="todo-text todo-text-completed" x="15" y="30">Finish React Native docs</text>
+      <text class="link-text" x="290" y="30">Unmark</text>
+      
+      <!-- Item 2 -->
+      <g transform="translate(0, 50)">
+        <rect class="todo-item" width="360" height="50"/>
+        <text class="todo-text" x="15" y="30">Create SVG previews</text>
+        <text class="link-text" x="280" y="30">Complete</text>
+      </g>
+    </g>
+  </g>
+</svg>
