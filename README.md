@@ -21,9 +21,12 @@ A complete React Native Todo List application with full CRUD operations and **re
 - **Update Tasks**: Mark tasks as completed or uncompleted with a single tap
 - **Delete Tasks**: Remove tasks with confirmation to prevent accidental deletions
 - **Real-time Sync**: WebSocket-powered instant updates across all devices and platforms
+- **Server Switcher**: Toggle between local and remote servers with live configuration UI
+- **Debug Panel**: Comprehensive real-time logging system with color-coded event tracking
 - **RESTful API Integration**: Seamless communication with backend microservices using Axios
 - **Socket.IO Client**: Bidirectional real-time communication with server
 - **Error Handling**: Comprehensive error alerts for network failures and API errors
+- **Fallback Mechanism**: Automatic data refresh if WebSocket connection fails
 - **Clean UI**: Modern, minimalist design with clear visual feedback
 - **Cross-Platform**: Runs on iOS, Android, and Web platforms via Expo
 
@@ -48,11 +51,11 @@ A complete React Native Todo List application with full CRUD operations and **re
 
 ## 🛠️ Technologies Used
 
-- **React Native** - Cross-platform mobile framework
-- **Expo** - Development platform and toolchain
-- **Socket.IO Client** - Real-time bidirectional communication
+- **React Native** - v0.81.5 - Cross-platform mobile framework
+- **Expo** - v54.0.20 - Development platform and toolchain
+- **Socket.IO Client** - v4.8.1 - Real-time bidirectional communication
 - **JavaScript** - Programming language
-- **Axios** - HTTP client for API requests
+- **Axios** - v1.12.2 - HTTP client for API requests
 - **REST API** - Backend integration (Node.js/Express/SQLite)
 - **React Hooks** - useState, useEffect for state management
 
@@ -60,13 +63,18 @@ A complete React Native Todo List application with full CRUD operations and **re
 
 ```
 myTodoApp/
-├── App.js              # Main application component with CRUD logic
-├── config.js           # API configuration for dev/production environments
+├── App.js              # Main application with CRUD, WebSocket, and debug system
 ├── package.json        # Dependencies and project configuration
 ├── app.json            # Expo configuration
-├── babel.config.js     # Babel configuration for React Native
+├── index.js            # Application entry point
 ├── assets/             # Images, fonts, and static resources
-└── node_modules/       # Installed dependencies
+├── .expo/              # Expo build artifacts
+├── BUILD_INFO.md       # Build and deployment documentation
+├── CHANGELOG.md        # Version history
+├── CONTRIBUTING.md     # Contribution guidelines
+├── LICENSE             # MIT License
+├── README.md           # Project documentation
+└── release-notes.md    # Latest release information
 ```
 
 ## 🚀 Setup & Installation
@@ -89,23 +97,22 @@ Follow these steps to get your development environment running:
     npm install
     ```
 
-3.  **Configure API environment:**
+3.  **Configure API Server:**
 
-    By default, the app is configured to use the **production API** (no local backend needed).
-
-    - **For production use** (default): No additional setup required!
-    - **For local development**:
-      - Edit `config.js` and change `CURRENT_ENV` to `ENV.DEVELOPMENT`
-      - Start your local backend server:
-        ```bash
-        cd ../ltsqj-crud_todo_sqlite
-        npm install
-        node index.js
-        ```
+    The app includes a built-in **Settings UI** for easy server configuration:
+    
+    - **No code changes needed!** Configure directly in the app
+    - Default: Remote server (IBM Code Engine)
+    - Switch to local server with toggle button
+    - Custom server URL input for your own backend
 
 ## 💻 Usage / How to Run
 
 1.  **Start the Expo development server:**
+    ```bash
+    npm start
+    ```
+    or
     ```bash
     npx expo start
     ```
@@ -254,6 +261,49 @@ useEffect(() => {
 
 *Using React Hooks provides a clean, functional approach to state management without the complexity of external state libraries.*
 
+### Dynamic Server Configuration
+
+```javascript
+// Settings UI - Dynamic server switching without code changes
+const [useLocalServer, setUseLocalServer] = useState(false);
+const [customUrl, setCustomUrl] = useState('');
+
+// Automatically update API and Socket URLs when settings change
+const API_URL = customUrl.trim() 
+  ? `${customUrl}/todos`
+  : useLocalServer 
+    ? `http://${Platform.OS === 'android' ? '10.0.2.2' : 'localhost'}:3000/todos`
+    : 'https://todolist.220fii1j0spm.us-south.codeengine.appdomain.cloud/todos';
+
+const SOCKET_URL = customUrl.trim()
+  ? customUrl
+  : useLocalServer
+    ? `http://${Platform.OS === 'android' ? '10.0.2.2' : 'localhost'}:3000`
+    : 'https://todolist.220fii1j0spm.us-south.codeengine.appdomain.cloud';
+```
+
+*This pattern enables runtime configuration changes, perfect for testing different environments without rebuilding the app.*
+
+### Debug Panel with Color-Coded Logging
+
+```javascript
+// Comprehensive logging system for debugging
+const addLog = (message, type = 'INFO') => {
+  const timestamp = new Date().toLocaleTimeString();
+  setDebugLogs(prev => {
+    const newLogs = [...prev, { message, type, timestamp }];
+    return newLogs.slice(-50); // Keep last 50 logs
+  });
+};
+
+// 7 event types: API, SOCKET, CONFIG, DATA, ERROR, FALLBACK, WARN
+addLog('Fetching todos from server...', 'API');
+addLog(`Socket connected to ${SOCKET_URL}`, 'SOCKET');
+addLog(`Switched to ${useLocalServer ? 'Local' : 'Remote'} Server`, 'CONFIG');
+```
+
+*Color-coded logging provides real-time visibility into app behavior, essential for debugging sync issues and network problems.*
+
 ## 📖 Learning Outcomes
 
 This project is an excellent demonstration of:
@@ -267,38 +317,52 @@ This project is an excellent demonstration of:
 - ✅ **Mobile UX**: Designing intuitive mobile user interfaces
 - ✅ **Cross-Platform Development**: Writing once, running everywhere with React Native
 
-## 🔧 API Configuration
+## 🔧 Server Configuration
 
-### Environment-Based Configuration
+### Built-in Settings UI
 
-The app now supports dynamic API configuration through `config.js`, allowing seamless switching between development and production environments.
+The app includes a **Settings Panel** in the user interface for easy server configuration - **no code changes needed!**
 
-#### Switching Between Environments
+#### How to Configure Server
 
-Edit the `config.js` file and change the `CURRENT_ENV` constant:
+1. **Open the app** - Settings panel is at the top of the screen
+2. **Toggle between servers**:
+   - **Use Remote Server** - Production API (IBM Code Engine)
+   - **Use Local Server** - Your local backend at localhost:3000
+3. **Custom Server URL** - Enter your own backend URL if needed
+4. **Debug Panel** - Monitor real-time API and Socket.IO events
 
-**For Production (Remote API):**
-```javascript
-// config.js
-const CURRENT_ENV = ENV.PRODUCTION; // Uses production API endpoint
-```
+#### Available Server Options
 
-**For Development (Local API):**
-```javascript
-// config.js
-const CURRENT_ENV = ENV.DEVELOPMENT; // Uses localhost:3000
-```
-
-#### Available Endpoints
-
-**Production API:**
+**Remote Server (Default):**
 - Base URL: `https://todolist.220fii1j0spm.us-south.codeengine.appdomain.cloud`
 - Deployed on IBM Code Engine
 - No local backend required
+- Works from anywhere
 
-**Development API:**
+**Local Server:**
 - Base URL: `http://localhost:3000`
 - Requires local backend server running
+- Best for development and testing
+
+**Custom Server:**
+- Enter any valid URL in the input field
+- Useful for testing different environments
+- Supports both HTTP and HTTPS
+
+#### Server Features
+
+The app includes:
+
+- **Settings UI** - Toggle between local/remote servers without code changes
+- **Debug Panel** - Color-coded logging system (API/SOCKET/CONFIG/DATA/ERROR/FALLBACK/WARN)
+- **Connection Status Indicator** - Visual feedback showing connected/disconnected state
+- **Environment Display** - Shows which server you're connected to
+- **Error Handling** - Displays detailed error messages with retry option
+- **Loading States** - Shows loading spinner while fetching data
+- **Automatic Retry** - Retry button for failed connections
+- **Timeout Configuration** - 10-second timeout for API requests
+- **Fallback Mechanism** - 300ms timeout before manual refresh on sync issues
 
 #### API Endpoints
 
@@ -307,41 +371,7 @@ const CURRENT_ENV = ENV.DEVELOPMENT; // Uses localhost:3000
 - **PUT** `/todos/:id` - Update a todo (body: `{ title: string, completed: boolean }`)
 - **DELETE** `/todos/:id` - Delete a todo
 
-#### Adding Custom Endpoints
-
-You can easily add more API endpoints in `config.js`:
-
-```javascript
-const API_CONFIG = {
-  [ENV.DEVELOPMENT]: {
-    API_URL: 'http://localhost:3000/todos',
-    SOCKET_URL: 'http://localhost:3000',
-    name: 'Local Development',
-  },
-  [ENV.PRODUCTION]: {
-    API_URL: 'https://your-production-api.com/todos',
-    SOCKET_URL: 'https://your-production-api.com',
-    name: 'Production',
-  },
-};
-```
-
-### Connection Features
-
-The app now includes:
-
-- **Connection Status Indicator** - Visual feedback showing connected/disconnected state
-- **Environment Display** - Shows which environment you're connected to (Development/Production)
-- **Error Handling** - Displays detailed error messages with retry option
-- **Loading States** - Shows loading spinner while fetching data
-- **Automatic Retry** - Retry button for failed connections
-- **Timeout Configuration** - 10-second timeout for API requests
-
-**Note for Android Emulator**: If using development mode, replace `localhost` with `10.0.2.2` in `config.js`:
-```javascript
-API_URL: 'http://10.0.2.2:3000/todos',
-SOCKET_URL: 'http://10.0.2.2:3000',
-```
+**Note for Android Emulator**: If using local server, the app automatically detects Android environment and uses `10.0.2.2` instead of `localhost` for proper connectivity.
 
 ## 🤝 Contributing
 
